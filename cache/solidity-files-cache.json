@@ -37,8 +37,8 @@
       ]
     },
     "/Users/elizabethfeldman/Desktop/CS251/proj4/contracts/exchange.sol": {
-      "lastModificationDate": 1668642763145,
-      "contentHash": "3aa699b7988a62ee312930d54a378d0f",
+      "lastModificationDate": 1668820764833,
+      "contentHash": "6b219c476630b7dbb6ea7b5ad472a25f",
       "sourceName": "contracts/exchange.sol",
       "solcConfig": {
         "version": "0.8.17",

@@ -111,7 +111,8 @@ contract TokenExchange is Ownable {
                 adjustAddLiquidityProviders(
                     msg.value,
                     msg.sender,
-                    old_eth_reserves
+                    old_eth_reserves,
+                    true
                 );
             }
         }
@@ -120,21 +121,27 @@ contract TokenExchange is Ownable {
     function adjustAddLiquidityProviders(
         uint newETHAmount,
         address senderAddress,
-        uint oldEthReserves
+        uint oldEthReserves,
+        bool addLiquid
     ) private {
         // TODO: if address is not already contained in the map, add address to the array
         if (lps[senderAddress] < 0) {
             lp_providers.push(senderAddress);
         }
         for (uint i = 0; i < lp_providers.length; i++) {
+            address currAddress = lp_providers[i];
+            uint old_amount = lps[currAddress];
             if (lp_providers[i] == senderAddress) {
-                lps[senderAddress] =
-                    (newETHAmount * denominator) /
-                    eth_reserves;
+                if (addLiquid) {
+                    lps[senderAddress] =
+                        (newETHAmount * denominator) /
+                        eth_reserves;
+                } else {
+                    //removeLiquidity() was called
+                }
             } else {
-                address currAddress = lp_providers[i];
                 lps[currAddress] =
-                    (newETHAmount / denominator) *
+                    ((old_amount - newETHAmount) / denominator) *
                     oldEthReserves;
             }
         }
@@ -159,6 +166,10 @@ contract TokenExchange is Ownable {
             (token_reserves - equivalent_token_amt) > 0,
             "Cannot deplete the liquidity pool to 0"
         );
+        // TODO: check for if liquidity provider trying to take more than they are "entitled to"
+        // require(
+        //     (lps[msg.sender] * amountETH) -  amountETH > 0
+        // );
 
         // HERE, do we need to check for tokens too??
         if (
@@ -166,6 +177,15 @@ contract TokenExchange is Ownable {
             curr_eth_price > min_exchange_rate
         ) {
             payable(msg.sender).transfer(amountETH); //transfer the money
+            uint old_eth_amt = eth_reserves;
+            eth_reserves = eth_reserves + amountETH;
+            token_reserves = token_reserves + equivalent_token_amt;
+            adjustAddLiquidityProviders(
+                amountETH,
+                msg.sender,
+                old_eth_amt,
+                false
+            );
         }
     }
 
@@ -175,7 +195,8 @@ contract TokenExchange is Ownable {
         external
         payable
     {
-        /******* TODO: Implement this function *******/
+        //removeLiquidity(amount?, max_exchange_rate, min);
+        // removeLP(int?)
     }
 
     /***  Define additional functions for liquidity fees here as needed ***/
