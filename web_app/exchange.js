@@ -18,7 +18,7 @@ const token_symbol = "LT"; // TODO: replace with symbol for your token
 // TODO: Paste your token and exchange contract ABIs in abi.js!
 
 // TODO: Paste your token contract address here:
-const token_address = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+const token_address = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 const token_abi = [
   {
     inputs: [],
@@ -1017,6 +1017,6 @@ const sanityCheck = async function () {
 // Sleep 3s to ensure init() finishes before sanityCheck() runs on first load.
 // If you run into sanityCheck() errors due to init() not finishing, please extend the sleep time.
 
-// setTimeout(function () {
-//   sanityCheck();
-// }, 3000);
+setTimeout(function () {
+  sanityCheck();
+}, 3000);

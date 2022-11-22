@@ -20,7 +20,7 @@ contract TokenExchange is Ownable {
     // Needed for looping through the keys of the lps mapping
     address[] private lp_providers;
     // map address of liquidity providers to their numerators
-    mapping(address => uint) private lp_numerators;
+    // mapping(address => uint) private lp_numerators;
 
     // constant denominator for our liquidity proportions in lps
     uint private denominator = 10000;
@@ -41,6 +41,7 @@ contract TokenExchange is Ownable {
     function createPool(uint amountTokens) external payable onlyOwner {
         // This function is already implemented for you; no changes needed.
 
+        console.log("hello");
         // require pool does not yet exist:
         require(token_reserves == 0, "Token reserves was not 0");
         require(eth_reserves == 0, "ETH reserves was not 0.");
@@ -125,24 +126,28 @@ contract TokenExchange is Ownable {
         bool addLiquid
     ) private {
         // TODO: if address is not already contained in the map, add address to the array
-        if (lps[senderAddress] < 0) {
+        console.log("hello");
+        if (lps[senderAddress] == 0) {
             lp_providers.push(senderAddress);
         }
+
+        // lp_providers.push(senderAddress);
         for (uint i = 0; i < lp_providers.length; i++) {
             address currAddress = lp_providers[i];
-            uint old_amount = lps[currAddress];
+            uint old_eth_amount = lps[currAddress] * oldEthReserves;
             if (lp_providers[i] == senderAddress) {
                 if (addLiquid) {
                     lps[senderAddress] =
-                        (newETHAmount * denominator) /
+                        ((old_eth_amount + (newETHAmount * denominator))) /
                         eth_reserves;
                 } else {
                     //removeLiquidity() was called
+                    lps[senderAddress] =
+                        ((old_eth_amount - (newETHAmount * denominator))) /
+                        eth_reserves;
                 }
             } else {
-                lps[currAddress] =
-                    ((old_amount - newETHAmount) / denominator) *
-                    oldEthReserves;
+                lps[currAddress] = old_eth_amount / eth_reserves;
             }
         }
     }
@@ -166,20 +171,18 @@ contract TokenExchange is Ownable {
             (token_reserves - equivalent_token_amt) > 0,
             "Cannot deplete the liquidity pool to 0"
         );
-        // TODO: check for if liquidity provider trying to take more than they are "entitled to"
-        // require(
-        //     (lps[msg.sender] * amountETH) -  amountETH > 0
-        // );
+        //TODO: check for if liquidity provider trying to take more than they are "entitled to"
+        require((lps[msg.sender] * eth_reserves) - amountETH > 0);
 
-        // HERE, do we need to check for tokens too??
         if (
             curr_eth_price < max_exchange_rate &&
             curr_eth_price > min_exchange_rate
         ) {
-            payable(msg.sender).transfer(amountETH); //transfer the money
+            payable(msg.sender).transfer(amountETH); //transfer the ETH amount
+            token.transferFrom(address(this), msg.sender, equivalent_token_amt); // transfer token amount
             uint old_eth_amt = eth_reserves;
-            eth_reserves = eth_reserves + amountETH;
-            token_reserves = token_reserves + equivalent_token_amt;
+            eth_reserves = eth_reserves - amountETH;
+            token_reserves = token_reserves - equivalent_token_amt;
             adjustAddLiquidityProviders(
                 amountETH,
                 msg.sender,
@@ -195,8 +198,18 @@ contract TokenExchange is Ownable {
         external
         payable
     {
-        //removeLiquidity(amount?, max_exchange_rate, min);
-        // removeLP(int?)
+        removeLiquidity(
+            lps[msg.sender] * eth_reserves,
+            max_exchange_rate,
+            min_exchange_rate
+        );
+
+        // remove LP from the array
+        for (uint256 i = 0; i < lp_providers.length; i++) {
+            if (lp_providers[i] == msg.sender) {
+                removeLP(i);
+            }
+        }
     }
 
     /***  Define additional functions for liquidity fees here as needed ***/
