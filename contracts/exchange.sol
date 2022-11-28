@@ -85,10 +85,10 @@ contract TokenExchange is Ownable {
 
     // Function addLiquidity: Adds liquidity given a supply of ETH (sent to the contract as msg.value).
     // You can change the inputs, or the scope of your function, as needed.
-    function addLiquidity(uint max_exchange_rate, uint min_exchange_rate)
-        external
-        payable
-    {
+    function addLiquidity(
+        uint max_exchange_rate,
+        uint min_exchange_rate
+    ) external payable {
         // sender wants to send equivalent of msg.value (ETH) in tokens to the contract
         uint equivalent_token_amt = msg.value * (token_reserves / eth_reserves);
         uint curr_eth_price = token_reserves / eth_reserves;
@@ -179,7 +179,7 @@ contract TokenExchange is Ownable {
             curr_eth_price > min_exchange_rate
         ) {
             payable(msg.sender).transfer(amountETH); //transfer the ETH amount
-            token.transferFrom(address(this), msg.sender, equivalent_token_amt); // transfer token amount
+            token.transfer(msg.sender, equivalent_token_amt); // transfer token amount
             uint old_eth_amt = eth_reserves;
             eth_reserves = eth_reserves - amountETH;
             token_reserves = token_reserves - equivalent_token_amt;
@@ -194,10 +194,10 @@ contract TokenExchange is Ownable {
 
     // Function removeAllLiquidity: Removes all liquidity that msg.sender is entitled to withdraw
     // You can change the inputs, or the scope of your function, as needed.
-    function removeAllLiquidity(uint max_exchange_rate, uint min_exchange_rate)
-        external
-        payable
-    {
+    function removeAllLiquidity(
+        uint max_exchange_rate,
+        uint min_exchange_rate
+    ) external payable {
         removeLiquidity(
             lps[msg.sender] * eth_reserves,
             max_exchange_rate,
@@ -218,10 +218,10 @@ contract TokenExchange is Ownable {
 
     // Function swapTokensForETH: Swaps your token with ETH
     // You can change the inputs, or the scope of your function, as needed.
-    function swapTokensForETH(uint amountTokens, uint max_exchange_rate)
-        external
-        payable
-    {
+    function swapTokensForETH(
+        uint amountTokens,
+        uint max_exchange_rate
+    ) external payable {
         /******* TODO: Implement this function *******/
     }
 
