@@ -18,7 +18,7 @@ const token_symbol = "LT"; // TODO: replace with symbol for your token
 // TODO: Paste your token and exchange contract ABIs in abi.js!
 
 // TODO: Paste your token contract address here:
-const token_address = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const token_address = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 const token_abi = [
   {
     inputs: [],
@@ -581,7 +581,7 @@ const exchange_abi = [
     type: "function",
   },
 ];
-const exchange_address = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const exchange_address = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const exchange_contract = new ethers.Contract(
   exchange_address,
   exchange_abi,
@@ -649,6 +649,12 @@ async function addLiquidity(amountEth, maxSlippagePct) {
   // var poolState = getPoolState();
   // var availableTokenAmt = poolState[token_liquidity];
   // var availableEthAmt = pooState[eth_liquidity];
+
+  await exchange_contract
+    .connect(provider.getSigner(defaultAccount))
+    .addLiquidity(100, 0, {
+      value: ethers.utils.parseUnits(amountEth.toString(), "wei"),
+    });
 }
 
 /*** REMOVE LIQUIDITY ***/

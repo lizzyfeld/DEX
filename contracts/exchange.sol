@@ -41,7 +41,6 @@ contract TokenExchange is Ownable {
     function createPool(uint amountTokens) external payable onlyOwner {
         // This function is already implemented for you; no changes needed.
 
-        console.log("hello");
         // require pool does not yet exist:
         require(token_reserves == 0, "Token reserves was not 0");
         require(eth_reserves == 0, "ETH reserves was not 0.");
@@ -90,6 +89,7 @@ contract TokenExchange is Ownable {
         uint min_exchange_rate
     ) external payable {
         // sender wants to send equivalent of msg.value (ETH) in tokens to the contract
+        console.log("adding Liquidity: ", eth_reserves);
         uint equivalent_token_amt = msg.value * (token_reserves / eth_reserves);
         uint curr_eth_price = token_reserves / eth_reserves;
 
@@ -125,8 +125,8 @@ contract TokenExchange is Ownable {
         uint oldEthReserves,
         bool addLiquid
     ) private {
-        // TODO: if address is not already contained in the map, add address to the array
-        console.log("hello");
+        // if address is not already contained in the map, add address to the array
+        console.log("adjusting liquidity providers");
         if (lps[senderAddress] == 0) {
             lp_providers.push(senderAddress);
         }
@@ -134,7 +134,7 @@ contract TokenExchange is Ownable {
         // lp_providers.push(senderAddress);
         for (uint i = 0; i < lp_providers.length; i++) {
             address currAddress = lp_providers[i];
-            uint old_eth_amount = lps[currAddress] * oldEthReserves;
+            uint old_eth_amount = lps[currAddress] * oldEthReserves; // old eth reserves is the eth pool before addLiquidity was called
             if (lp_providers[i] == senderAddress) {
                 if (addLiquid) {
                     lps[senderAddress] =
@@ -147,7 +147,7 @@ contract TokenExchange is Ownable {
                         eth_reserves;
                 }
             } else {
-                lps[currAddress] = old_eth_amount / eth_reserves;
+                lps[currAddress] = old_eth_amount / eth_reserves; // TODO: could this also have a floating point error?
             }
         }
     }
@@ -161,8 +161,9 @@ contract TokenExchange is Ownable {
     ) public payable {
         // add require statement for: (1) if liquidity provider tries to take out more liquidity than they're entitled to
         //                            (2) if liquidity provider tried to deplete ETH or token reserves to 0
-        uint equivalent_token_amt = amountETH * (token_reserves / eth_reserves);
-        uint curr_eth_price = token_reserves / eth_reserves;
+        console.log("removing liquidity");
+        uint equivalent_token_amt = (amountETH * token_reserves) / eth_reserves;
+        uint curr_eth_price = token_reserves / eth_reserves; // TODO: watch for floats here
         require(
             (eth_reserves - amountETH) > 0,
             "Cannot deplete the liquidity pool to 0"
@@ -172,6 +173,9 @@ contract TokenExchange is Ownable {
             "Cannot deplete the liquidity pool to 0"
         );
         //TODO: check for if liquidity provider trying to take more than they are "entitled to"
+        // require(
+        //     ((lps[msg.sender] * eth_reserves) / denominator) - (amountETH) > 0 // TODO: is this correct?
+        // );
         require((lps[msg.sender] * eth_reserves) - amountETH > 0);
 
         if (
@@ -199,6 +203,7 @@ contract TokenExchange is Ownable {
         uint min_exchange_rate
     ) external payable {
         removeLiquidity(
+            //((lps[msg.sender] * eth_reserves) / denominator), // TODO: should I divide by denominator here?
             lps[msg.sender] * eth_reserves,
             max_exchange_rate,
             min_exchange_rate
@@ -222,7 +227,16 @@ contract TokenExchange is Ownable {
         uint amountTokens,
         uint max_exchange_rate
     ) external payable {
-        /******* TODO: Implement this function *******/
+        /******* TODO: USE APPROVE HERE? *******/
+        uint token_exchange_rate = eth_reserves / token_reserves;
+        uint equiv_ETH_amount = amountTokens * (token_exchange_rate);
+        require(equiv_ETH_amount < eth_reserves);
+
+        if (token_exchange_rate <= max_exchange_rate) {
+            eth_reserves -= equiv_ETH_amount;
+            token_reserves += amountTokens;
+            payable(msg.sender).transfer(equiv_ETH_amount);
+        }
     }
 
     // Function swapETHForTokens: Swaps ETH for your tokens
@@ -230,5 +244,14 @@ contract TokenExchange is Ownable {
     // You can change the inputs, or the scope of your function, as needed.
     function swapETHForTokens(uint max_exchange_rate) external payable {
         /******* TODO: Implement this function *******/
+        uint ETH_exchange_rate = token_reserves / eth_reserves;
+        uint equiv_token_amount = msg.value * (ETH_exchange_rate);
+        require(equiv_token_amount < token_reserves);
+
+        if (ETH_exchange_rate <= max_exchange_rate) {
+            eth_reserves += msg.value;
+            token_reserves -= equiv_token_amount;
+            token.transfer(msg.sender, equiv_token_amount);
+        }
     }
 }
