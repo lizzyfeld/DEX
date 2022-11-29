@@ -646,27 +646,49 @@ async function getPoolState() {
 /*** ADD LIQUIDITY ***/
 async function addLiquidity(amountEth, maxSlippagePct) {
   /** TODO: ADD YOUR CODE HERE **/
-  // var poolState = getPoolState();
-  // var availableTokenAmt = poolState[token_liquidity];
-  // var availableEthAmt = pooState[eth_liquidity];
+  var poolState = await getPoolState();
+  var availableTokenAmt = poolState["token_liquidity"];
+  var availableEthAmt = poolState["eth_liquidity"];
+  var equivalent_token_amt = (amountEth * availableTokenAmt) / availableEthAmt;
+  await token_contract.approve(
+    exchange_address,
+    parseInt(equivalent_token_amt)
+  );
+
+  await exchange_contract
+    .connect(provider.getSigner(defaultAccount))
+    .addLiquidity(100, 0, {
+      value: ethers.utils.parseUnits(amountEth.toString(), "wei"),
+    });
 }
 
 /*** REMOVE LIQUIDITY ***/
 async function removeLiquidity(amountEth, maxSlippagePct) {
-  /** TODO: ADD YOUR CODE HERE **/
+  await exchange_contract
+    .connect(provider.getSigner(defaultAccount))
+    .removeLiquidity(amountEth.toString(), 100, 0);
 }
 
 async function removeAllLiquidity(maxSlippagePct) {
-  /** TODO: ADD YOUR CODE HERE **/
+  await exchange_contract
+    .connect(provider.getSigner(defaultAccount))
+    .removeAllLiquidity(100, 0);
 }
 
 /*** SWAP ***/
 async function swapTokensForETH(amountToken, maxSlippagePct) {
-  /** TODO: ADD YOUR CODE HERE **/
+  await token_contract.approve(exchange_address, amountToken);
+  await exchange_contract
+    .connect(provider.getSigner(defaultAccount))
+    .swapTokensForETH(amountToken, maxSlippagePct);
 }
 
 async function swapETHForTokens(amountEth, maxSlippagePct) {
-  /** TODO: ADD YOUR CODE HERE **/
+  await exchange_contract
+    .connect(provider.getSigner(defaultAccount))
+    .swapETHForTokens(maxSlippagePct, {
+      value: ethers.utils.parseUnits(amountEth.toString(), "wei"),
+    });
 }
 
 // =============================================================================

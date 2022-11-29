@@ -89,33 +89,49 @@ contract TokenExchange is Ownable {
         uint max_exchange_rate,
         uint min_exchange_rate
     ) external payable {
+        // Make sure sender is sending positive amt of money.
+        require(msg.value > 0, "Must add a positive amount of liquidity.");
+        // Make sure sender has enough ETH and enough tokens (use msg.value because you add same amout of tokens as ETH)
+        // TODO: check if sender actually has enough ETH to make this work
+
         // sender wants to send equivalent of msg.value (ETH) in tokens to the contract
         uint equivalent_token_amt = msg.value * (token_reserves / eth_reserves);
         uint curr_eth_price = token_reserves / eth_reserves;
 
-        if (token.balanceOf(msg.sender) >= equivalent_token_amt) {
-            if (
-                curr_eth_price < max_exchange_rate &&
-                curr_eth_price > min_exchange_rate
-            ) {
-                token.transferFrom(
-                    msg.sender,
-                    address(this),
-                    equivalent_token_amt
-                );
+        require(
+            token.balanceOf(msg.sender) >= equivalent_token_amt,
+            "Not enough tokens"
+        );
 
-                uint old_eth_reserves = eth_reserves;
-                eth_reserves += msg.value;
-                token_reserves += equivalent_token_amt;
+        if (
+            curr_eth_price < max_exchange_rate &&
+            curr_eth_price > min_exchange_rate
+        ) {
+            console.log(
+                "balance of contract BEFORE transfer",
+                token.balanceOf(address(this))
+            );
+            token.transferFrom(msg.sender, address(this), equivalent_token_amt);
 
-                // populate lps address -> proportion of ETH/entire eth pool owned by current user
-                adjustAddLiquidityProviders(
-                    msg.value,
-                    msg.sender,
-                    old_eth_reserves,
-                    true
-                );
-            }
+            console.log(
+                "balance of contract AFTER transfer",
+                token.balanceOf(address(this))
+            );
+
+            uint old_eth_reserves = eth_reserves;
+            eth_reserves += msg.value;
+            token_reserves += equivalent_token_amt;
+
+            // updating k per section 4 advice
+            k = eth_reserves * token_reserves;
+
+            // populate lps address -> proportion of ETH/entire eth pool owned by current user
+            adjustAddLiquidityProviders(
+                msg.value,
+                msg.sender,
+                old_eth_reserves,
+                true
+            );
         }
     }
 
@@ -126,25 +142,32 @@ contract TokenExchange is Ownable {
         bool addLiquid
     ) private {
         // TODO: if address is not already contained in the map, add address to the array
-        console.log("hello");
+
         if (lps[senderAddress] == 0) {
             lp_providers.push(senderAddress);
         }
 
-        // lp_providers.push(senderAddress);
         for (uint i = 0; i < lp_providers.length; i++) {
             address currAddress = lp_providers[i];
             uint old_eth_amount = lps[currAddress] * oldEthReserves;
             if (lp_providers[i] == senderAddress) {
                 if (addLiquid) {
-                    lps[senderAddress] =
-                        ((old_eth_amount + (newETHAmount * denominator))) /
-                        eth_reserves;
+                    uint curr_lp_num = lps[senderAddress];
+                    uint old_lp_bal = (curr_lp_num * oldEthReserves) /
+                        denominator;
+                    uint new_lp_bal = old_lp_bal + newETHAmount;
+                    uint new_pool_amt = oldEthReserves + newETHAmount; // could just use eth_reserves here
+                    uint new_lp_num = (new_lp_bal * denominator) / new_pool_amt;
+                    lps[senderAddress] = new_lp_num;
                 } else {
                     //removeLiquidity() was called
-                    lps[senderAddress] =
-                        ((old_eth_amount - (newETHAmount * denominator))) /
-                        eth_reserves;
+                    uint curr_lp_num = lps[senderAddress];
+                    uint old_lp_bal = (curr_lp_num * oldEthReserves) /
+                        denominator;
+                    uint new_lp_bal = old_lp_bal - newETHAmount;
+                    uint new_pool_amt = oldEthReserves - newETHAmount; // could just use eth_reserves here
+                    uint new_lp_num = (new_lp_bal * denominator) / new_pool_amt;
+                    lps[senderAddress] = new_lp_num;
                 }
             } else {
                 lps[currAddress] = old_eth_amount / eth_reserves;
@@ -161,18 +184,28 @@ contract TokenExchange is Ownable {
     ) public payable {
         // add require statement for: (1) if liquidity provider tries to take out more liquidity than they're entitled to
         //                            (2) if liquidity provider tried to deplete ETH or token reserves to 0
-        uint equivalent_token_amt = amountETH * (token_reserves / eth_reserves);
+        uint equivalent_token_amt = (amountETH * token_reserves) / eth_reserves;
         uint curr_eth_price = token_reserves / eth_reserves;
-        require(
-            (eth_reserves - amountETH) > 0,
-            "Cannot deplete the liquidity pool to 0"
+        console.log("first subtraction: ", amountETH, eth_reserves);
+        console.log(
+            "second subtraction: ",
+            token_reserves,
+            equivalent_token_amt
         );
         require(
-            (token_reserves - equivalent_token_amt) > 0,
-            "Cannot deplete the liquidity pool to 0"
+            eth_reserves > amountETH,
+            "Cannot deplete all ETH from liquidity pool"
         );
+        require(
+            token_reserves > equivalent_token_amt,
+            "Cannot deplete all tokens from liquidity pool"
+        );
+        console.log("trying to take out:", lps[msg.sender], eth_reserves);
         //TODO: check for if liquidity provider trying to take more than they are "entitled to"
-        require((lps[msg.sender] * eth_reserves) - amountETH > 0);
+        require(
+            (lps[msg.sender] * eth_reserves) > amountETH,
+            "LP trying to take more than they are entitled to"
+        );
 
         if (
             curr_eth_price < max_exchange_rate &&
@@ -183,6 +216,10 @@ contract TokenExchange is Ownable {
             uint old_eth_amt = eth_reserves;
             eth_reserves = eth_reserves - amountETH;
             token_reserves = token_reserves - equivalent_token_amt;
+
+            // updating k per section 4 advice
+            k = eth_reserves * token_reserves;
+
             adjustAddLiquidityProviders(
                 amountETH,
                 msg.sender,
@@ -199,7 +236,7 @@ contract TokenExchange is Ownable {
         uint min_exchange_rate
     ) external payable {
         removeLiquidity(
-            lps[msg.sender] * eth_reserves,
+            (lps[msg.sender] * eth_reserves) / denominator,
             max_exchange_rate,
             min_exchange_rate
         );
@@ -222,22 +259,98 @@ contract TokenExchange is Ownable {
         uint amountTokens,
         uint max_exchange_rate
     ) external payable {
-        /******* TODO: USE APPROVE HERE? *******/
-        uint token_exchange_rate = eth_reserves / token_reserves;
-        uint equiv_ETH_amout = amountTokens * (token_exchange_rate);
-        require(equiv_ETH_amout < eth_reserves);
+        require(
+            amountTokens > 0,
+            "Must swap a positive non-zero amount of tokens for ETH"
+        );
+        require(
+            token.balanceOf(msg.sender) >= amountTokens,
+            "Not enough tokens"
+        );
+        require(amountTokens < token_reserves, "Cannot deplete pool of tokens");
 
-        if (token_exchange_rate <= max_exchange_rate) {
-            eth_reserves -= equiv_ETH_amout;
-            token_reserves += amountTokens;
-            payable(msg.sender).transfer(equiv_ETH_amout);
-        }
+        uint equivalent_ETH_amt = (amountTokens * eth_reserves) /
+            token_reserves;
+
+        console.log("EQUIVALENT ETH AMOUNT:", equivalent_ETH_amt); // , amountTokens, eth_reserves, token_reserves, equivalent_ETH_amt);
+        require(
+            equivalent_ETH_amt < eth_reserves,
+            "cannot deplete pool of ETH reserves"
+        );
+        console.log(
+            "Token value of this contract before receiving token:",
+            token.balanceOf(address(this))
+        );
+        console.log(
+            "ETH value of this contract before sending ETH:",
+            address(this).balance
+        );
+
+        console.log(
+            "\n\n\n eth_reserves, token_reserves",
+            eth_reserves,
+            token_reserves,
+            max_exchange_rate
+        );
+        require(
+            (eth_reserves / token_reserves) <= max_exchange_rate,
+            "exchange rate higher than max allowed"
+        );
+
+        token.transferFrom(msg.sender, address(this), amountTokens);
+        payable(msg.sender).transfer(equivalent_ETH_amt); //transfer the ETH amount
+        console.log(
+            "Token value of this contract after receiving token:",
+            token.balanceOf(address(this))
+        );
+        console.log(
+            "ETH value of this contract after sending ETH:",
+            address(this).balance
+        );
+        token_reserves += amountTokens;
+        eth_reserves -= equivalent_ETH_amt;
     }
 
     // Function swapETHForTokens: Swaps ETH for your tokens
     // ETH is sent to contract as msg.value
     // You can change the inputs, or the scope of your function, as needed.
     function swapETHForTokens(uint max_exchange_rate) external payable {
-        /******* TODO: Implement this function *******/
+        require(
+            msg.value > 0,
+            "Must swap a positive non-zero amount of ETH for tokens"
+        );
+        require(msg.value < eth_reserves, "Cannot deplete pool of tokens");
+        require(
+            (token_reserves / eth_reserves) <= max_exchange_rate,
+            "exchange rate higher than max allowed"
+        );
+
+        uint equivalent_token_amt = (msg.value * token_reserves) / eth_reserves;
+
+        require(
+            equivalent_token_amt < token_reserves,
+            "cannot deplete pool of token reserves"
+        );
+
+        console.log(
+            "ETH value of this contract after receiving ETH:",
+            address(this).balance
+        );
+        console.log(
+            "Token value of this contract before sending token:",
+            token.balanceOf(address(this))
+        );
+
+        token.transfer(msg.sender, equivalent_token_amt); // transfer token amount
+
+        console.log(
+            "Token value of this contract after sending token:",
+            token.balanceOf(address(this))
+        );
+
+        token_reserves -= equivalent_token_amt;
+        eth_reserves += msg.value;
+
+        // How to check if the person has enough ETH for this?
     }
 }
