@@ -37,8 +37,8 @@
       ]
     },
     "/Users/chris/Documents/FALL22/CS 251/DEX/contracts/exchange.sol": {
-      "lastModificationDate": 1669754851328,
-      "contentHash": "274b1cff367e802bd96e2fcd8a13fb96",
+      "lastModificationDate": 1669761878539,
+      "contentHash": "6699b4e5924a3e7d9f4ca305672db18b",
       "sourceName": "contracts/exchange.sol",
       "solcConfig": {
         "version": "0.8.17",

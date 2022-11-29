@@ -99,7 +99,10 @@ contract TokenExchange is Ownable {
         // TODO: check if sender actually has enough ETH to make this work
 
         // sender wants to send equivalent of msg.value (ETH) in tokens to the contract
-        uint equivalent_token_amt = msg.value * (token_reserves / eth_reserves);
+
+        console.log("EQUIVALENT AMT CALCULATIONS", k, eth_reserves);
+        console.log('continued', msg.value, token_reserves);
+        uint equivalent_token_amt = msg.value * (token_reserves / eth_reserves); // (token_reserves - (k / (eth_reserves + msg.value))); //  
         uint curr_eth_price = token_reserves / eth_reserves;
 
         require(token.balanceOf(msg.sender) >= equivalent_token_amt, "Not enough tokens");
@@ -182,10 +185,13 @@ contract TokenExchange is Ownable {
     ) public payable {
         // add require statement for: (1) if liquidity provider tries to take out more liquidity than they're entitled to
         //                            (2) if liquidity provider tried to deplete ETH or token reserves to 0
-        uint equivalent_token_amt = (amountETH * token_reserves) / eth_reserves;
-        uint curr_eth_price = token_reserves / eth_reserves;
         console.log("first subtraction: ", amountETH, eth_reserves);
-        console.log("second subtraction: ", token_reserves, equivalent_token_amt);
+        console.log("second subtraction: ", token_reserves, k);
+        uint equivalent_token_amt = amountETH * token_reserves / eth_reserves; // ((k / (token_reserves - amountETH)) - eth_reserves);
+        uint curr_eth_price = token_reserves / eth_reserves;
+
+        console.log("Equivalent token amount: ", equivalent_token_amt);
+        
         require(
             eth_reserves > amountETH,
             "Cannot deplete all ETH from liquidity pool"
@@ -227,6 +233,7 @@ contract TokenExchange is Ownable {
         uint max_exchange_rate,
         uint min_exchange_rate
     ) external payable {
+        console.log("REMOVE ALL TESTING", lps[msg.sender], eth_reserves,  denominator);
         removeLiquidity(
             lps[msg.sender] * eth_reserves / denominator,
             max_exchange_rate,
@@ -257,8 +264,12 @@ contract TokenExchange is Ownable {
 
 
 
-
-        uint equivalent_ETH_amt = (amountTokens * eth_reserves) / token_reserves;
+        console.log("token_reserves:", token_reserves);
+        console.log("k", k);
+        console.log("eth_reserves", eth_reserves);
+        console.log("amountTokens", amountTokens);
+        console.log("Equiv eth amount:", (k / token_reserves + amountTokens));
+        uint equivalent_ETH_amt = eth_reserves - (k / (token_reserves + amountTokens)); //(amountTokens * eth_reserves) / token_reserves;
 
 
         console.log("EQUIVALENT ETH AMOUNT:", equivalent_ETH_amt); // , amountTokens, eth_reserves, token_reserves, equivalent_ETH_amt);
@@ -286,7 +297,7 @@ contract TokenExchange is Ownable {
         require((token_reserves / eth_reserves) <= max_exchange_rate, "exchange rate higher than max allowed");
 
 
-        uint equivalent_token_amt = (msg.value * token_reserves) / eth_reserves;
+        uint equivalent_token_amt = (token_reserves - (k / (eth_reserves + msg.value))); // token_reserves - k / (eth_reserves + msg.value); // (msg.value * token_reserves) / eth_reserves;
 
 
         require(equivalent_token_amt < token_reserves, "cannot deplete pool of token reserves");
