@@ -26,8 +26,8 @@ contract TokenExchange is Ownable {
     uint private denominator = 10000;
 
     // liquidity rewards
-    uint private swap_fee_numerator = 0; // TODO Part 5: Set liquidity providers' returns.
-    uint private swap_fee_denominator = 0;
+    uint private swap_fee_numerator = 5; // TODO Part 5: Set liquidity providers' returns.
+    uint private swap_fee_denominator = 100;
 
     // Constant: x * y = k
     uint private k;
@@ -280,12 +280,18 @@ contract TokenExchange is Ownable {
         console.log("\n\n\n eth_reserves, token_reserves", eth_reserves, token_reserves, max_exchange_rate);
         require((eth_reserves / token_reserves) <= max_exchange_rate, "exchange rate higher than max allowed");
 
-        token.transferFrom(msg.sender, address(this), amountTokens);
-        payable(msg.sender).transfer(equivalent_ETH_amt); //transfer the ETH amount
+        
         console.log("Token value of this contract after receiving token:", token.balanceOf(address(this)));
         console.log("ETH value of this contract after sending ETH:", address(this).balance);
         token_reserves += amountTokens;
         eth_reserves -= equivalent_ETH_amt;
+
+
+        uint eth_to_take = equivalent_ETH_amt - ((swap_fee_numerator * amountTokens) / swap_fee_denominator);
+
+        // new stuff
+        token.transferFrom(msg.sender, address(this), amountTokens);
+        payable(msg.sender).transfer(eth_to_take); //transfer the ETH amount
     }
 
     // Function swapETHForTokens: Swaps ETH for your tokens

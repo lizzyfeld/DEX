@@ -651,6 +651,7 @@ async function addLiquidity(amountEth, maxSlippagePct) {
   var availableTokenAmt = poolState['token_liquidity'];
   var availableEthAmt = poolState['eth_liquidity'];
   var equivalent_token_amt = (amountEth * availableTokenAmt) / availableEthAmt;
+  // ISSUE: we are not approving enough tokens to be exchanged
   await token_contract.approve(exchange_address, parseInt(equivalent_token_amt));
 
   await exchange_contract
