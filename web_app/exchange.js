@@ -1025,4 +1025,4 @@ const sanityCheck = async function () {
 
 setTimeout(function () {
   sanityCheck();
-}, 3000);
+}, 5000);
