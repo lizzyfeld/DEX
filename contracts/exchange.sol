@@ -154,7 +154,7 @@ contract TokenExchange is Ownable {
                     uint curr_lp_num = lps[senderAddress];
                     uint old_lp_bal = curr_lp_num * oldEthReserves / denominator;
                     uint new_lp_bal = old_lp_bal + newETHAmount;
-                    uint new_pool_amt = oldEthReserves + newETHAmount;
+                    uint new_pool_amt = oldEthReserves + newETHAmount; // could just use eth_reserves here
                     uint new_lp_num = new_lp_bal * denominator / new_pool_amt;
                     lps[senderAddress] = new_lp_num;
 
@@ -163,7 +163,7 @@ contract TokenExchange is Ownable {
                     uint curr_lp_num = lps[senderAddress];
                     uint old_lp_bal = curr_lp_num * oldEthReserves / denominator;
                     uint new_lp_bal = old_lp_bal - newETHAmount;
-                    uint new_pool_amt = oldEthReserves - newETHAmount;
+                    uint new_pool_amt = oldEthReserves - newETHAmount; // could just use eth_reserves here
                     uint new_lp_num = new_lp_bal * denominator / new_pool_amt;
                     lps[senderAddress] = new_lp_num;
                 }
