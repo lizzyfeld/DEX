@@ -222,7 +222,16 @@ contract TokenExchange is Ownable {
         uint amountTokens,
         uint max_exchange_rate
     ) external payable {
-        /******* TODO: Implement this function *******/
+        /******* TODO: USE APPROVE HERE? *******/
+        uint token_exchange_rate = eth_reserves / token_reserves;
+        uint equiv_ETH_amout = amountTokens * (token_exchange_rate);
+        require(equiv_ETH_amout < eth_reserves);
+
+        if (token_exchange_rate <= max_exchange_rate) {
+            eth_reserves -= equiv_ETH_amout;
+            token_reserves += amountTokens;
+            payable(msg.sender).transfer(equiv_ETH_amout);
+        }
     }
 
     // Function swapETHForTokens: Swaps ETH for your tokens
