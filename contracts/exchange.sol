@@ -5,7 +5,7 @@ import "./token.sol";
 import "hardhat/console.sol";
 
 contract TokenExchange is Ownable {
-    string public exchange_name = "";
+    string public exchange_name = "CS 251 Exchange";
 
     address tokenAddr = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // TODO: paste token contract address here 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0
     Token public token = Token(tokenAddr);
@@ -42,6 +42,10 @@ contract TokenExchange is Ownable {
         // This function is already implemented for you; no changes needed.
 
         console.log("hello");
+        console.log("createpoool TESTING************************\n\n\n\n\n\n\n\n");
+
+        // console.log("WHAT THE FUCK &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n\n\n\n\n\n");
+
         // require pool does not yet exist:
         require(token_reserves == 0, "Token reserves was not 0");
         require(eth_reserves == 0, "ETH reserves was not 0.");
@@ -89,20 +93,38 @@ contract TokenExchange is Ownable {
         external
         payable
     {
+        // Make sure sender is sending positive amt of money.
+        console.log(msg.value);
+        console.log("MSG VALUE ************************\n\n\n\n\n\n\n\n");
+
+        require(msg.value > 0, "Must add a positive amount of liquidity.");
+        // Make sure sender has enough ETH and enough tokens (use msg.value because you add same amout of tokens as ETH)
+        // TODO: check if sender actually has enough ETH to make this work
+
         // sender wants to send equivalent of msg.value (ETH) in tokens to the contract
         uint equivalent_token_amt = msg.value * (token_reserves / eth_reserves);
         uint curr_eth_price = token_reserves / eth_reserves;
 
-        if (token.balanceOf(msg.sender) >= equivalent_token_amt) {
+        // console.log("ADD liquidity TESTING************************\n\n\n\n\n\n\n\n");
+        // console.log("equivalent token amount:", token_reserves, eth_reserves, equivalent_token_amt);
+        // console.log("curr eth price: ", token_reserves, eth_reserves, curr_eth_price);
+
+        require(token.balanceOf(msg.sender) >= equivalent_token_amt, "Not enough tokens");
+        // console.log(curr_eth_price < max_exchange_rate &&
+        //         curr_eth_price > min_exchange_rate);
+        // console.log("min & max exchange rates: ", min_exchange_rate, max_exchange_rate);
             if (
                 curr_eth_price < max_exchange_rate &&
                 curr_eth_price > min_exchange_rate
             ) {
+                console.log("balance of contract BEFORE transfer", token.balanceOf(address(this)));
                 token.transferFrom(
                     msg.sender,
                     address(this),
                     equivalent_token_amt
                 );
+
+                console.log("balance of contract AFTER transfer", token.balanceOf(address(this)));
 
                 uint old_eth_reserves = eth_reserves;
                 eth_reserves += msg.value;
@@ -117,7 +139,6 @@ contract TokenExchange is Ownable {
                 );
             }
         }
-    }
 
     function adjustAddLiquidityProviders(
         uint newETHAmount,
@@ -126,7 +147,9 @@ contract TokenExchange is Ownable {
         bool addLiquid
     ) private {
         // TODO: if address is not already contained in the map, add address to the array
-        console.log("hello");
+        console.log("adjust LIQ PROVIDERS TESTING************************\n\n\n\n\n\n\n\n");
+
+
         if (lps[senderAddress] == 0) {
             lp_providers.push(senderAddress);
         }
@@ -222,7 +245,8 @@ contract TokenExchange is Ownable {
         external
         payable
     {
-        /******* TODO: Implement this function *******/
+        require(amountTokens >= token.balanceOf(msg.sender), "Not enough tokens");
+
     }
 
     // Function swapETHForTokens: Swaps ETH for your tokens
