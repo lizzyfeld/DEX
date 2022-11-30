@@ -646,13 +646,19 @@ async function getPoolState() {
 /*** ADD LIQUIDITY ***/
 async function addLiquidity(amountEth, maxSlippagePct) {
   /** TODO: ADD YOUR CODE HERE **/
+
+  let liquidity_token_test = await token_contract
+    .connect(provider.getSigner(defaultAccount))
+    .balanceOf(exchange_address);
+
   var poolState = await getPoolState();
   var availableTokenAmt = poolState["token_liquidity"];
   var availableEthAmt = poolState["eth_liquidity"];
-  var equivalent_token_amt = (amountEth * availableTokenAmt) / availableEthAmt;
+  //var equivalent_token_amt = (amountEth * availableTokenAmt) / availableEthAmt;
+  // ISSUE: we are not approving enough tokens to be exchangeda
   await token_contract.approve(
     exchange_address,
-    parseInt(equivalent_token_amt)
+    parseInt(liquidity_token_test)
   );
 
   await exchange_contract
